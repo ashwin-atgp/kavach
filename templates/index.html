@@ -57,12 +57,13 @@
         <div class="card">
           <h3>{{ category|capitalize }}</h3>
           <table>
-            <thead><tr><th>Check</th><th>Result</th></tr></thead>
+            <thead><tr><th>Check</th><th>Description</th><th>Result</th></tr></thead>
             <tbody>
-              {% for key, value in result.items() %}
+              {% for item in result %}
               <tr>
-                <td>{{ key }}</td>
-                <td><pre>{{ value }}</pre></td>
+                <td>{{ item.name }}</td>
+                <td>{{ item.description }}</td>
+                <td><pre>{{ item.value }}</pre></td>
               </tr>
               {% endfor %}
             </tbody>
