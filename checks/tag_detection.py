@@ -1,58 +1,65 @@
 # checks/tag_detection.py
 
-from utils.http import fetch_text
-from bs4 import BeautifulSoup
-import re
+import asyncio
+from playwright.async_api import async_playwright
 
-def run(domain: str):
+# List of CMP vendor keywords to search for
+CMP_VENDORS = ["OneTrust", "Cookiebot", "Quantcast"]
+
+async def run(domain: str):
     """
-    Detects presence of:
-      • Google Ad Manager (GAM)
+    Use a real browser UA via Playwright to fetch and render the page,
+    then detect:
+      • Google Ad Manager (GAM/GPT) tags
       • Google Tag Manager (GTM)
-      • AdSense
+      • AdSense loader
       • Common Consent Management Platforms (CMPs)
     """
 
-    # 1) Fetch page content over HTTPS or HTTP
-    content = None
-    for prefix in ('https://', 'http://'):
-        status, text = fetch_text(f"{prefix}{domain}")
-        if status and status < 400:
-            content = text
-            break
-    if not content:
-        return {'error': f'Failed to fetch page (status {status})'}
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch(headless=True)
+        context = await browser.new_context(user_agent=(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/115.0.0.0 Safari/537.36"
+        ))
+        page = await context.new_page()
 
-    soup = BeautifulSoup(content, 'lxml')
+        # Try HTTPS then HTTP
+        for prefix in ("https://", "http://"):
+            try:
+                resp = await page.goto(f"{prefix}{domain}", timeout=15000)
+                if resp and resp.status < 400:
+                    break
+            except Exception:
+                continue
+
+        content = await page.content()
+        await browser.close()
+
     result = {}
-
-    # 2) GAM detection: look for multiple core GPT API calls
-    gam_regex = r'googletag\.(pubads|defineSlot|enableServices)'
-    result['gam'] = bool(re.search(gam_regex, content))
-
-    # 3) GTM detection: check script src or inline dataLayer
-    gtm = False
-    for script in soup.find_all('script', src=True):
-        if 'googletagmanager.com/gtm.js?id=' in script['src']:
-            gtm = True
-            break
-    if not gtm and re.search(r'window\.dataLayer', content):
-        gtm = True
-    result['gtm'] = gtm
-
-    # 4) AdSense detection via adsbygoogle loader
-    result['adsense'] = any(
-        'adsbygoogle.js' in script.get('src', '')
-        for script in soup.find_all('script', src=True)
+    # Detect GAM/GPT (multiple core API calls)
+    result["gam"] = bool(
+        any(token in content for token in ["googletag.pubads", "googletag.defineSlot", "googletag.enableServices"])
     )
 
-    # 5) CMP detection: case-insensitive search for known vendor names
-    cmp_vendors = ['OneTrust', 'Cookiebot', 'Quantcast']
-    detected = []
+    # Detect GTM via script URL or dataLayer
+    result["gtm"] = False
+    for tag in ("googletagmanager.com/gtm.js?id=", "window.dataLayer"):
+        if tag in content:
+            result["gtm"] = True
+            break
+
+    # Detect AdSense via its loader
+    result["adsense"] = "adsbygoogle.js" in content
+
+    # Detect CMP vendors (case-insensitive search)
     lower = content.lower()
-    for vendor in cmp_vendors:
-        if vendor.lower() in lower:
-            detected.append(vendor)
-    result['cmp'] = detected
+    result["cmp"] = [v for v in CMP_VENDORS if v.lower() in lower]
 
     return result
+
+
+# If you need a synchronous wrapper:
+def run_sync(domain: str):
+    return asyncio.get_event_loop().run_until_complete(run(domain))
