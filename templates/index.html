@@ -1,85 +1,82 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Kavach: Compliance & Hygiene Checker</title>
-  <style>
-    /* Base styles */
-    body { font-family: Arial, sans-serif; background: #f0f2f5; color: #333; margin: 0; padding: 0; }
-    header { background: #005f73; color: #fff; padding: 1rem; text-align: center; display: flex; align-items: center; justify-content: center; }
-    header img { height: 40px; margin-right: 1rem; }
-    main { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
-    form { display: flex; justify-content: center; align-items: center; margin-bottom: 2rem; }
-    input[name="domain"] { width: 300px; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px 0 0 4px; font-size: 1rem; }
-    button { padding: 0.5rem 1rem; border: none; background: #008891; color: #fff; cursor: pointer; border-radius: 0 4px 4px 0; font-size: 1rem; position: relative; overflow: hidden; }
-    button:hover { background: #006175; }
-    .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #008891; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin-left: 8px; display: none; }
-    .spinner.show { display: inline-block; }
-
-    /* Report grid and cards */
-    .report { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
-    .card { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 1rem; opacity: 0; animation: fadeInUp 0.6s ease forwards; }
-    .card:nth-child(even) { animation-delay: 0.1s; }
-    .card:nth-child(odd) { animation-delay: 0.2s; }
-    .card h3 { margin-top: 0; color: #005f73; }
-
-    /* Table styling */
-    table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
-    th, td { padding: 0.5rem; border-bottom: 1px solid #eee; text-align: left; vertical-align: top; }
-    th { background: #e0fbfc; }
-    tr:nth-child(even) { background: #f7f7f7; animation: fadeIn 0.4s ease; }
-    pre { white-space: pre-wrap; word-wrap: break-word; margin: 0; }
-
-    /* Keyframes */
-    @keyframes spin { to { transform: rotate(360deg); } }
-    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-  </style>
+  <!-- Bulma CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-  <header>
-    <img src="{{ url_for('static', filename='logo.png') }}" alt="Kavach Logo">
-    <h1>Kavach: Compliance & Hygiene Checker</h1>
-  </header>
-  <main>
-    <form id="check-form" method="post">
-      <input type="text" name="domain" placeholder="example.com" required autofocus>
-      <button type="submit">Run Checks</button>
-      <div class="spinner" id="spinner"></div>
-    </form>
+  <section class="hero is-primary is-bold">
+    <div class="hero-body">
+      <div class="container has-text-centered">
+        <figure class="image is-128x128 is-inline-block">
+          <img src="{{ url_for('static', filename='logo.png') }}" alt="Kavach Logo">
+        </figure>
+        <h1 class="title">Kavach</h1>
+        <h2 class="subtitle">Compliance & Hygiene Checker</h2>
+      </div>
+    </div>
+  </section>
 
-    {% if report %}
-    <section>
-      <h2>Results for {{ domain }}</h2>
-      <div class="report" id="report">
-        {% for category, result in report.items() %}
-        <div class="card">
-          <h3>{{ category|capitalize }}</h3>
-          <table>
-            <thead><tr><th>Check</th><th>Description</th><th>Result</th></tr></thead>
-            <tbody>
-              {% for item in result %}
-              <tr>
-                <td>{{ item.name }}</td>
-                <td>{{ item.description }}</td>
-                <td><pre>{{ item.value }}</pre></td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+  <section class="section">
+    <div class="container">
+      <form method="post">
+        <div class="field has-addons has-addons-centered">
+          <div class="control is-expanded">
+            <input class="input" type="text" name="domain" placeholder="Enter domain e.g. example.com" required autofocus>
+          </div>
+          <div class="control">
+            <button class="button is-link" type="submit">
+              <span class="icon"><i class="fas fa-play"></i></span>
+              <span>Run Checks</span>
+            </button>
+          </div>
+        </div>
+      </form>
+
+      {% if report %}
+      <div class="columns is-multiline">
+        {% for category, items in report.items() %}
+        <div class="column is-one-third">
+          <div class="box">
+            <h3 class="title is-5 has-text-link">
+              <span class="icon"><i class="fas fa-folder-open"></i></span>
+              {{ category|capitalize }}
+            </h3>
+            <table class="table is-fullwidth is-striped is-hoverable">
+              <thead>
+                <tr><th>Check</th><th>Description</th><th>Result</th></tr>
+              </thead>
+              <tbody>
+                {% for item in items %}
+                <tr>
+                  <td>{{ item.name }}</td>
+                  <td>{{ item.description }}</td>
+                  <td>
+                    {% if item.value is iterable and not item.value is string %}
+                      <ul>
+                        {% for v in item.value %}
+                        <li>{{ v }}</li>
+                        {% endfor %}
+                      </ul>
+                    {% else %}
+                      {{ item.value }}
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </div>
         {% endfor %}
       </div>
-    </section>
-    {% endif %}
-  </main>
-  <script>
-    const form = document.getElementById('check-form');
-    const spinner = document.getElementById('spinner');
-    form.addEventListener('submit', () => {
-      spinner.classList.add('show');
-    });
-  </script>
+      {% endif %}
+    </div>
+  </section>
 </body>
 </html>
