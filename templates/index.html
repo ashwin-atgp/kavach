@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kavach: Compliance & Hygiene Checker</title>
+  <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+</head>
+<body>
+  <header>
+    <h1>Kavach: Compliance & Hygiene Checker</h1>
+  </header>
+  <main>
+    <form method="post">
+      <input type="text" name="domain" placeholder="example.com" required autofocus>
+      <button type="submit">Run Checks</button>
+    </form>
+
+    {% if report %}
+    <section>
+      <h2>Results for {{ domain }}</h2>
+      <pre>{{ report | tojson(indent=2) }}</pre>
+    </section>
+    {% endif %}
+  </main>
+</html>
