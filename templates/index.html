@@ -19,7 +19,24 @@
     {% if report %}
     <section>
       <h2>Results for {{ domain }}</h2>
-      <pre>{{ report | tojson(indent=2) }}</pre>
+      <div class="report">
+  {% for category, result in report.items() %}
+    <div class="card">
+      <h3>{{ category|capitalize }}</h3>
+      <table>
+        <thead><tr><th>Check</th><th>Result</th></tr></thead>
+        <tbody>
+          {% for key, value in result.items() %}
+          <tr>
+            <td>{{ key }}</td>
+            <td><pre>{{ value }}</pre></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endfor %}
+</div>
     </section>
     {% endif %}
   </main>
